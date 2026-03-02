@@ -1,11 +1,10 @@
 name: cd
 
+# タグ push のみトリガー
 on:
   push:
-    branches:
-      - master
     tags:
-      - "v*"
+      - "v*"   # v1.0.0 のようなタグのみトリガー
 
 jobs:
   docker:
@@ -21,9 +20,8 @@ jobs:
         with:
           images: 4nm1tsu/niowase-police
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=tag
-            type=sha,format=short
+            type=ref,event=tag     # タグからimage tag作成
+            type=sha,format=short  # SHA
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

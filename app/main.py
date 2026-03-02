@@ -7,7 +7,6 @@ import os
 from fastapi import FastAPI
 import uvicorn
 
-from config import DISCORD_TOKEN, THRESHOLD, TARGET_CHANNEL_ID
 from clip_model import predict
 
 # =========================
