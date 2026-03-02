@@ -2,6 +2,7 @@ import discord
 import requests
 import tempfile
 import threading
+import os
 
 from fastapi import FastAPI
 import uvicorn
@@ -9,6 +10,13 @@ import uvicorn
 from config import DISCORD_TOKEN, THRESHOLD, TARGET_CHANNEL_ID
 from clip_model import predict
 
+# =========================
+# Configs
+# =========================
+
+DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
+THRESHOLD = float(os.environ["THRESHOLD"])
+TARGET_CHANNEL_ID = int(os.environ["TARGET_CHANNEL_ID"])
 
 # =========================
 # Discord Client
