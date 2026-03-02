@@ -1,17 +1,61 @@
 import discord
 import requests
 import tempfile
+import threading
+
+from fastapi import FastAPI
+import uvicorn
+
 from config import DISCORD_TOKEN, THRESHOLD, TARGET_CHANNEL_ID
 from clip_model import predict
+
+
+# =========================
+# Discord Client
+# =========================
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
 
+
+# =========================
+# Health Check Server
+# =========================
+
+app = FastAPI()
+
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "discord_ready": client.is_ready()
+    }
+
+
+def run_health_server():
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
+    )
+
+
+# 別スレッドで起動
+threading.Thread(target=run_health_server, daemon=True).start()
+
+
+# =========================
+# Discord Events
+# =========================
+
 @client.event
 async def on_ready():
-    print(f"Logged in as {client.user}")
+    print(f"[READY] Logged in as {client.user}", flush=True)
+
 
 @client.event
 async def on_message(message: discord.Message):
@@ -45,13 +89,21 @@ async def on_message(message: discord.Message):
 
             if score >= THRESHOLD:
                 await message.reply(
-                    f"🚨👮 匂わせ警察です。\n"
-                    f"当画像は匂わせの疑いがあります。\n"
+                    "🚨👮 匂わせ警察です。\n"
+                    "当画像は匂わせの疑いがあります。\n"
                     f"スコア: {score:.3f}\n"
-                    f"これは警告です。今後の投稿に注意してください。"
+                    "これは警告です。今後の投稿に注意してください。"
                 )
 
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"[ERROR] {e}", flush=True)
+
+
+# =========================
+# Startup
+# =========================
+
+if not DISCORD_TOKEN:
+    raise ValueError("DISCORD_TOKEN is not set")
 
 client.run(DISCORD_TOKEN)

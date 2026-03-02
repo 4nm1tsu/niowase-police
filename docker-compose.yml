@@ -9,3 +9,5 @@ services:
       - ./hf_cache:/root/.cache/huggingface
     restart: unless-stopped
     gpus: all
+    ports:
+      - "8000:8000"
