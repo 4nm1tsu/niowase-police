@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./hf_cache:/root/.cache/huggingface
+    restart: unless-stopped
+    gpus: all
