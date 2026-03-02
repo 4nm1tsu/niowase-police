@@ -1,22 +1,26 @@
 import torch
-from transformers import CLIPProcessor, CLIPModel
+from transformers import AutoProcessor, AutoModel
 from PIL import Image
+import logging
+
+# ログ抑制
+logging.getLogger("transformers").setLevel(logging.ERROR)
 
 # =========================
 # Device
 # =========================
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"[CLIP] Using device: {device}")
+print(f"[SigLIP] Using device: {device}", flush=True)
 
 # =========================
-# Model
+# Model（SigLIP）
 # =========================
-model = CLIPModel.from_pretrained(
-    "openai/clip-vit-base-patch32"
+model = AutoModel.from_pretrained(
+    "google/siglip-base-patch16-224"
 ).to(device)
 
-processor = CLIPProcessor.from_pretrained(
-    "openai/clip-vit-base-patch32"
+processor = AutoProcessor.from_pretrained(
+    "google/siglip-base-patch16-224"
 )
 
 # =========================
@@ -24,25 +28,43 @@ processor = CLIPProcessor.from_pretrained(
 # =========================
 
 positive_prompts = [
-    "Two plates of Japanese izakaya food on a table",
-    "Two beer glasses on a wooden table at a Japanese pub",
-    "Dinner table with food for two people in an izakaya",
-    "A person sitting across the table in a Japanese restaurant, face not visible",
+    # レストラン
+    "Two plates on a restaurant table facing each other",
+    "Dinner table set for two people with two glasses",
+    "A woman sitting across the table, her face not visible",
+
+    # 居酒屋
+    "Two beer glasses on a wooden table at a Japanese izakaya",
     "Two sets of chopsticks placed opposite each other",
+
+    # カフェ
+    "A cafe table with desserts for two people",
+    "Two drinks and pancakes on a table",
+    "Brunch date with someone sitting opposite",
+    "Another person's arm visible across the table",
+    "Two forks placed on a dessert table",
+
+    # 家ディナー
+    "Someone cutting food with a knife across the table",
+    "A dinner scene with another person eating",
+    "A romantic dinner at home with someone sitting opposite",
+    "A person using a knife at the dinner table across from you",
+    "A home dinner with a partner",
 ]
 
 negative_prompts = [
-    "One person eating alone at a bar counter",
-    "Single beer glass on a table",
-    "Only one plate of food on the table",
-    "A group of many people drinking together",
-    "A family dinner with many dishes and people",
+    "A clearly solo dining scene with only one plate visible",
+    "A person eating completely alone at a table",
+    "Solo dining with only one chair visible",
+    "A selfie while eating alone",
+    "A large group of many people at a party",
 ]
 
 all_prompts = positive_prompts + negative_prompts
 
+
 # =========================
-# Prediction
+# Prediction（Sigmoid独立評価）
 # =========================
 def predict(image_path: str) -> float:
     image = Image.open(image_path).convert("RGB")
@@ -51,7 +73,7 @@ def predict(image_path: str) -> float:
         text=all_prompts,
         images=image,
         return_tensors="pt",
-        padding=True
+        padding="max_length"
     )
 
     inputs = {k: v.to(device) for k, v in inputs.items()}
@@ -59,15 +81,14 @@ def predict(image_path: str) -> float:
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits_per_image
-        probs = logits.softmax(dim=1)[0]
 
-    # ポジティブ平均
-    pos_score = probs[:len(positive_prompts)].mean()
+        # SigLIPはsoftmaxではなくsigmoid
+        probs = torch.sigmoid(logits)[0]
 
-    # ネガティブ平均
-    neg_score = probs[len(positive_prompts):].mean()
+    # 上位2つを平均
+    pos_score = probs[:len(positive_prompts)].topk(2).values.mean()
+    neg_score = probs[len(positive_prompts):].topk(2).values.mean()
 
-    # 差分スコア
     final_score = (pos_score - neg_score).item()
 
     print(
@@ -76,5 +97,9 @@ def predict(image_path: str) -> float:
         f"final={final_score:.3f}",
         flush=True
     )
+
+    # どのプロンプトが効いているか確認
+    for i, p in enumerate(all_prompts):
+        print(f"{probs[i]:.3f} : {p}", flush=True)
 
     return final_score
