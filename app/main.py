@@ -14,6 +14,7 @@ from clip_model import predict
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.2))
 TARGET_CHANNEL_ID = int(os.environ.get("TARGET_CHANNEL_ID", 0))
+APP_VERSION = os.environ.get("APP_VERSION", "v1.0.0")
 
 # =========================
 # Discord Client
@@ -104,6 +105,17 @@ async def on_message(message: discord.Message):
                     f"スコア: {score:.3f}\n"
                     "これは警告です。今後の投稿に注意してください。"
                 )
+
+# =========================
+# Discord Events
+# =========================
+
+@client.event
+async def on_ready():
+    print(f"[READY] Logged in as {client.user} (Version: {APP_VERSION})", flush=True)
+    
+    activity = discord.Game(name=f"匂わせ警察 {APP_VERSION}")
+    await client.change_presence(status=discord.Status.online, activity=activity)
 
 # =========================
 # Startup
