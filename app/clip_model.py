@@ -50,6 +50,15 @@ positive_prompts = [
     "A romantic dinner at home with someone sitting opposite",
     "A person using a knife at the dinner table across from you",
     "A home dinner with a partner",
+
+    # 中華
+    "Two bowls of ramen on a table facing each other",
+    "Ramen set for two people with chopsticks"
+
+    # 記念日 
+    "A romantic dinner for a couple with wine glasses and candles",
+    "Two people having a cozy dinner at home with dessert",
+    "A romantic meal setup for partners, with plates and drinks",
 ]
 
 negative_prompts = [
