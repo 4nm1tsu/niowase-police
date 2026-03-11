@@ -15,6 +15,7 @@ DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.2))
 TARGET_CHANNEL_ID = int(os.environ.get("TARGET_CHANNEL_ID", 0))
 APP_VERSION = os.environ.get("APP_VERSION", "v1.0.0")
+TIMEOUT_MINUTES = int(os.environ.get("TIMEOUT_MINUTES", 0))
 
 # =========================
 # Discord Client
@@ -99,12 +100,27 @@ async def on_message(message: discord.Message):
             print(f"[DEBUG] Result Score: {score:.3f}", flush=True)
 
             if score >= THRESHOLD:
-                await message.reply(
+                warning_message = (
                     "🚨👮 **匂わせ警察です**\n"
                     "当画像は匂わせの疑いがあります。\n"
                     f"スコア: {score:.3f}\n"
                     "これは警告です。今後の投稿に注意してください。"
                 )
+
+                # タイムアウトの付与
+                if TIMEOUT_MINUTES > 0:
+                    try:
+                        timeout_duration = discord.utils.utcnow() + discord.timedelta(minutes=TIMEOUT_MINUTES)
+                        await message.author.timeout(timeout_duration, reason=f"匂わせ検出 (スコア: {score:.3f})")
+                        warning_message += f"\n\n⏱️ **実刑**: {TIMEOUT_MINUTES}分間のタイムアウトが付与されました。"
+                        print(f"[TIMEOUT] User {message.author} has been timed out for {TIMEOUT_MINUTES} minutes", flush=True)
+                    except discord.Forbidden:
+                        print(f"[ERROR] No permission to timeout user {message.author}", flush=True)
+                        warning_message += "\n\n⚠️ タイムアウトの付与に失敗しました（権限不足）。"
+                    except Exception as e:
+                        print(f"[ERROR] Failed to timeout user {message.author}: {e}", flush=True)
+
+                await message.reply(warning_message)
 
 # =========================
 # Discord Events
