@@ -3,6 +3,7 @@ import requests
 import tempfile
 import asyncio
 import os
+from datetime import timedelta
 from fastapi import FastAPI
 import uvicorn
 import threading
@@ -75,10 +76,6 @@ async def process_image_and_predict(attachment: discord.Attachment):
 # =========================
 
 @client.event
-async def on_ready():
-    print(f"[READY] Logged in as {client.user}", flush=True)
-
-@client.event
 async def on_message(message: discord.Message):
     # Bot自身の発言や指定チャンネル以外を無視
     if message.author.bot:
@@ -110,7 +107,7 @@ async def on_message(message: discord.Message):
                 # タイムアウトの付与
                 if TIMEOUT_MINUTES > 0:
                     try:
-                        timeout_duration = discord.utils.utcnow() + discord.timedelta(minutes=TIMEOUT_MINUTES)
+                        timeout_duration = discord.utils.utcnow() + timedelta(minutes=TIMEOUT_MINUTES)
                         await message.author.timeout(timeout_duration, reason=f"匂わせ検出 (スコア: {score:.3f})")
                         warning_message += f"\n\n⏱️ **実刑**: {TIMEOUT_MINUTES}分間のタイムアウトが付与されました。"
                         print(f"[TIMEOUT] User {message.author} has been timed out for {TIMEOUT_MINUTES} minutes", flush=True)
@@ -129,7 +126,10 @@ async def on_message(message: discord.Message):
 @client.event
 async def on_ready():
     print(f"[READY] Logged in as {client.user} (Version: {APP_VERSION})", flush=True)
-    
+    print(f"[CONFIG] THRESHOLD: {THRESHOLD}", flush=True)
+    print(f"[CONFIG] TARGET_CHANNEL_ID: {TARGET_CHANNEL_ID}", flush=True)
+    print(f"[CONFIG] TIMEOUT_MINUTES: {TIMEOUT_MINUTES}", flush=True)
+
     activity = discord.Game(name=f"匂わせ警察 {APP_VERSION}")
     await client.change_presence(status=discord.Status.online, activity=activity)
 
